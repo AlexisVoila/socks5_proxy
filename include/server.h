@@ -10,7 +10,7 @@ namespace sys = boost::system;
 
 class server {
 public:
-    server(const std::string& port);
+    explicit server(const std::string& port);
     virtual ~server();
 
     server(const server& other) = delete;

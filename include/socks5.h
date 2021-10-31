@@ -64,13 +64,13 @@ public:
     };
 
 
-    typedef struct request_header {
+    struct request_header {
         std::uint8_t version;
         std::uint8_t command;
         std::uint8_t reserved;
         std::uint8_t type;
         std::uint8_t data[max_host_info_size];
-    } request_header;
+    };
 
     static bool is_auth_request(const std::uint8_t* buffer, std::size_t length);
 

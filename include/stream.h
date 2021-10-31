@@ -1,8 +1,8 @@
 #ifndef SOCKS5_PROXY_STREAM_H
 #define SOCKS5_PROXY_STREAM_H
 
-#include <memory>
 #include "io_event.h"
+#include <memory>
 
 class stream_manager;
 using stream_manager_ptr = std::shared_ptr<stream_manager>;
