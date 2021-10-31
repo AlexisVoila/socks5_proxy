@@ -6,7 +6,7 @@
 using fmt = boost::format;
 using logger = logging::logger;
 
-tcp_client_stream::tcp_client_stream(const stream_manager_ptr& ptr, int id, const net::executor& ctx)
+tcp_client_stream::tcp_client_stream(const stream_manager_ptr& ptr, int id, net::io_context& ctx)
     : client_stream(ptr, id)
     , socket_(ctx)
     , resolver_(ctx), read_buffer_{}, write_buffer_{} {

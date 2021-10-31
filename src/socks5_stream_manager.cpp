@@ -1,6 +1,5 @@
 #include "../include/socks5_stream_manager.h"
 #include "../include/tcp_client_stream.h"
-
 #include "../logger/logger.h"
 #include <boost/format.hpp>
 
@@ -12,8 +11,7 @@ void socks5_stream_manager::start(server_stream_ptr stream) {
 
     logger::trace((fmt("[%1%] session created") % stream->id()).str());
 
-    auto executor{stream->executor()};
-    auto cli_stream = std::make_shared<tcp_client_stream>(shared_from_this(), stream->id(), executor);
+    auto cli_stream = std::make_shared<tcp_client_stream>(shared_from_this(), stream->id(), stream->context());
 
     socks5_session session{socks5_session(stream->id(), stream, std::move(cli_stream))};
     sessions_.insert({stream->id(), std::move(session)});

@@ -10,7 +10,7 @@ using tcp = boost::asio::ip::tcp;
 
 class tcp_client_stream final : public client_stream {
 public:
-    tcp_client_stream(const stream_manager_ptr& ptr, int id, const net::executor& ctx);
+    tcp_client_stream(const stream_manager_ptr& ptr, int id, net::io_context& ctx);
     ~tcp_client_stream() override;
 
 private:

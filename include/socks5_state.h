@@ -1,12 +1,13 @@
 #ifndef SOCKS5_PROXY_SOCKS5_STATE_H
 #define SOCKS5_PROXY_SOCKS5_STATE_H
 
-#include <memory>
 #include "io_event.h"
+#include <memory>
 
 class server_stream;
-class client_stream;
 using server_stream_ptr = std::shared_ptr<server_stream>;
+
+class client_stream;
 using client_stream_ptr = std::shared_ptr<client_stream>;
 
 class socks5_session;

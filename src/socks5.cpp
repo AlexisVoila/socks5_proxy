@@ -1,5 +1,4 @@
 #include "../include/socks5.h"
-
 #include <boost/asio.hpp>
 
 namespace net = boost::asio;

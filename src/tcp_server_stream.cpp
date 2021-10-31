@@ -1,13 +1,13 @@
 #include "tcp_server_stream.h"
 #include "stream_manager.h"
-#include <boost/format.hpp>
 #include "../logger/logger.h"
+#include <boost/format.hpp>
 
 using fmt = boost::format;
 using logger = logging::logger;
 
-tcp_server_stream::tcp_server_stream(const stream_manager_ptr& ptr, int id, const net::executor& ctx)
-    : server_stream(ptr, id), socket_(ctx), read_buffer_{}, write_buffer_{} {
+tcp_server_stream::tcp_server_stream(const stream_manager_ptr& ptr, int id, net::io_context& ctx)
+    : server_stream(ptr, id), ctx_{ctx}, socket_(ctx_), read_buffer_{}, write_buffer_{} {
 }
 
 tcp_server_stream::~tcp_server_stream() {
@@ -15,7 +15,7 @@ tcp_server_stream::~tcp_server_stream() {
     logger::trace(str);
 }
 
-net::executor tcp_server_stream::executor() { return socket_.get_executor(); }
+net::io_context& tcp_server_stream::context() { return ctx_; }
 
 tcp::socket& tcp_server_stream::socket() { return socket_; }
 

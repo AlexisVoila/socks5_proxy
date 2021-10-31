@@ -45,8 +45,7 @@ void server::async_wait_signals() {
 }
 
 void server::start_accept() {
-    auto ex{acceptor_.get_executor()};
-    auto new_stream = std::make_shared<tcp_server_stream>(stream_manager_, ++stream_id_, ex);
+    auto new_stream = std::make_shared<tcp_server_stream>(stream_manager_, ++stream_id_, ctx_);
     acceptor_.async_accept(
         new_stream->socket(),
         [this, new_stream](const sys::error_code &ec) {
