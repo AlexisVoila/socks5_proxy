@@ -6,54 +6,102 @@
 using fmt = boost::format;
 using logger = logging::logger;
 
-void socks5_stream_manager::start(server_stream_ptr stream) {
-    stream->start();
-
-    logger::trace((fmt("[%1%] session created") % stream->id()).str());
-
-    auto cli_stream = std::make_shared<tcp_client_stream>(shared_from_this(), stream->id(), stream->context());
-
-    socks5_session session{socks5_session(stream->id(), stream, std::move(cli_stream))};
-    sessions_.insert({stream->id(), std::move(session)});
+void socks5_stream_manager::stop(stream_ptr stream) {
+    stop(stream->id());
 }
 
-void socks5_stream_manager::stop(stream_ptr stream) {
-    auto it = sessions_.find(stream->id());
-    if (it != sessions_.end()) {
-        it->second.stop();
-        logger::info((fmt("[%1%] session closed, rx_bytes: %2%, tx_bytes: %3%")
-                      % stream->id()
-                      % it->second.context().transferred_bytes_to_local
-                      % it->second.context().transferred_bytes_to_remote).str());
-        logger::trace((fmt("live sessions %1%") % sessions_.size() ).str());
+void socks5_stream_manager::stop(int id) {
+    if (auto it = sessions_.find(id); it != sessions_.end()) {
+        it->second.client->stop();
+        it->second.server->stop();
+
+        if (const auto itt = states_.find(id); itt != states_.end()) {
+            logger::info((fmt("[%1%] session closed, rx_bytes: %2%, tx_bytes: %3%, live sessions %4% ")
+                          % id
+                          % itt->second.context().transferred_bytes_to_local
+                          % itt->second.context().transferred_bytes_to_remote
+                          % states_.size()).str());
+            states_.erase(itt);
+        }
+
         sessions_.erase(it);
     }
 }
 
-void socks5_stream_manager::notify(io_event event, server_stream_ptr stream) {
-    if (event.type == io_event::read || event.type == io_event::write) {
-        auto it = sessions_.find(stream->id());
-        if (it != sessions_.end())
-            it->second.handle(event, stream);
-    } else if (event.type == io_event::close) {
-        stop(stream);
-    } else {
-        std::string error_string(event.buffer.begin(), event.buffer.end());
-        logger::error((fmt("[%1%] session error: %2%") % stream->id() % error_string).str());
-        stop(stream);
+void socks5_stream_manager::on_close(io_event event, stream_ptr stream) {
+    stop(stream);
+}
+
+void socks5_stream_manager::on_error(io_event event, stream_ptr stream) {
+    std::string error_string(event.buffer.begin(), event.buffer.end());
+    logger::error((fmt("[%1%] session error: %2%") % stream->id() % error_string).str());
+    stop(stream);
+}
+
+void socks5_stream_manager::on_accept(server_stream_ptr upstream) {
+    upstream->start();
+    const auto id{upstream->id()};
+    logger::trace((fmt("[%1%] session created") % id).str());
+
+    auto downstream = std::make_shared<tcp_client_stream>(shared_from_this(), id, upstream->context());
+
+    socks_pair pair{id, std::move(upstream), std::move(downstream)};
+    sessions_.insert({id, std::move(pair)});
+
+    socks5_session session{id, shared_from_this()};
+    states_.insert({id, std::move(session)});
+}
+
+void socks5_stream_manager::on_read(io_event event, server_stream_ptr stream) {
+    if (auto it = states_.find(stream->id()); it != states_.end())
+        it->second.handle_server_read(event);
+}
+
+void socks5_stream_manager::on_write(io_event event, server_stream_ptr stream) {
+    if (auto it = states_.find(stream->id()); it != states_.end())
+        it->second.handle_server_write(event);
+}
+
+void socks5_stream_manager::read_server(int id) {
+    if (auto it = sessions_.find(id); it != sessions_.end())
+        it->second.server->read();
+}
+
+void socks5_stream_manager::write_server(int id, io_event event) {
+    if (auto it = sessions_.find(id); it != sessions_.end())
+        it->second.server->write(std::move(event));
+}
+
+void socks5_stream_manager::on_read(io_event event, client_stream_ptr stream) {
+    if (auto it = states_.find(stream->id()); it != states_.end())
+        it->second.handle_client_read(event);
+}
+
+void socks5_stream_manager::on_write(io_event event, client_stream_ptr stream) {
+    if (auto it = states_.find(stream->id()); it != states_.end())
+        it->second.handle_client_write(event);
+}
+
+void socks5_stream_manager::on_connect(io_event event, client_stream_ptr stream) {
+    if (auto it = states_.find(stream->id()); it != states_.end())
+        it->second.handle_client_connect(event);
+}
+
+void socks5_stream_manager::read_client(int id) {
+    if (auto it = sessions_.find(id); it != sessions_.end())
+        it->second.client->read();
+}
+
+void socks5_stream_manager::write_client(int id, io_event event) {
+    if (auto it = sessions_.find(id); it != sessions_.end())
+        it->second.client->write(std::move(event));
+}
+
+void socks5_stream_manager::connect(int id, std::string host, std::string service) {
+    if (auto it = sessions_.find(id); it != sessions_.end()) {
+        it->second.client->set_host(std::move(host));
+        it->second.client->set_service(std::move(service));
+        it->second.client->start();
     }
 }
 
-void socks5_stream_manager::notify(io_event event, client_stream_ptr stream) {
-    if (event.type == io_event::read || event.type == io_event::write || event.type == io_event::connect) {
-        auto it = sessions_.find(stream->id());
-        if (it != sessions_.end())
-            it->second.handle(event, stream);
-    } else if (event.type == io_event::close) {
-        stop(stream);
-    } else {
-        std::string error_string(event.buffer.begin(), event.buffer.end());
-        logger::error((fmt("[%1%] session error: %2%") % stream->id() % error_string).str());
-        stop(stream);
-    }
-}

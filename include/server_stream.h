@@ -11,8 +11,6 @@ class server_stream : public stream, public std::enable_shared_from_this<server_
 public:
     server_stream(const stream_manager_ptr& smp, int id) : stream(smp, id) {}
     virtual net::io_context& context() = 0;
-
-private:
 };
 
 using server_stream_ptr = std::shared_ptr<server_stream>;

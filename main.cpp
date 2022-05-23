@@ -10,7 +10,7 @@ auto parse_command_line_arguments(int argc, char* argv[]) {
 
     po::options_description desc("All options");
     desc.add_options()
-        ("port,p", po::value<std::string>(&listen_port)->required(), "socks5 server listen port number")
+        ("port,p", po::value<std::string>(&listen_port)->default_value("8080")->required(), "socks5 server listen port number")
         ("log_level,v", po::value<std::string>()->default_value("info"),
          "verbosity level of log messages [debug|trace|info|warning|error|fatal]")
         ("log_file,l", po::value<std::string>(&log_file_path), "log file path")
@@ -22,6 +22,7 @@ auto parse_command_line_arguments(int argc, char* argv[]) {
         std::cout << desc << "\n";
         exit(EXIT_SUCCESS);
     }
+
     try {
         po::notify(vm);
     } catch (const po::required_option& e) {
@@ -65,6 +66,7 @@ int main(int argc, char* argv[]) {
     logger::initialize(log_file_path, log_output, level);
 
     try {
+        std::cout << "listen_port: " << listen_port << "\n";
         server srv(listen_port);
         srv.run();
     } catch (std::exception& ex) {

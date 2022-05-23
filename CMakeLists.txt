@@ -1,17 +1,32 @@
 cmake_minimum_required(VERSION 3.17)
 project(socks5_proxy)
 
-set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
+set(CMAKE_CXX_STANDARD 20)
 
-#DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL
-#set( CMAKE_BUILD_TYPE RELEASE )
+# Suppressing relish warnings when using fresh versions of C++ Boost
+set(Boost_NO_WARN_NEW_VERSIONS 1)
 
-find_package(Boost REQUIRED COMPONENTS thread program_options)
+if (WIN32)
+    set(Boost_USE_STATIC_LIBS       ON)
+    set(Boost_USE_MULTITHREADED     ON)
+    set(Boost_USE_STATIC_RUNTIME    OFF)
+
+    set (BOOST_ROOT         "c:/dev/lib/boost/boost_1_79_0")
+    set (Boost_INCLUDE_DIR  "c:/dev/lib/boost/boost_1_79_0")
+    set (Boost_LIBRARIES    "c:/dev/lib/boost/boost_1_79_0/lib64-msvc-14.3")
+endif()
+
+find_package(Boost 1.78 COMPONENTS program_options REQUIRED)
+
+message(STATUS "Boost path:             ${BOOST_ROOT}")
+message(STATUS "Boost include path:     ${Boost_INCLUDE_DIR}")
+message(STATUS "Boost libraries path:   ${Boost_LIBRARIES}")
 
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
+
+# Asking Boost for information about automatic link requests
+add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
 
 set (HEADERS
         include/stream.h
@@ -42,3 +57,9 @@ set (SOURCES
 
 add_executable(socks5_proxy ${SOURCES} ${HEADERS})
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+
+if (MSVC)
+
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
+endif()
+

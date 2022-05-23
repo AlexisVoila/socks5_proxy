@@ -17,6 +17,7 @@ namespace logging {
     }
 
     void logger::create() {
+        std::locale::global(std::locale(""));
         static logger the_instance;
         instance_ = &the_instance;
     }
@@ -62,6 +63,7 @@ namespace logging {
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 
         std::stringstream ss;
+        ss.imbue(std::locale());
         ss << std::put_time(localtime(&tt), "%F %T");
         ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
 
@@ -78,11 +80,15 @@ namespace logging {
             total_message.push_back('\n');
 
         auto& out_stream = (log_level <= level::info) ? std::cout : std::cerr;
-        if (output_ == console || output_ == file_and_console)
+        if (output_ == console || output_ == file_and_console) {
             out_stream << total_message;
+            out_stream.flush();
+        }
 
-        if (file_.is_open() && (output_ & file))
+        if (file_.is_open() && (output_ & file)) {
             file_ << total_message;
+            file_.flush();
+        }
     }
 
     logger::~logger() {

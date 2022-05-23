@@ -3,33 +3,33 @@
 
 #include "socks5_state.h"
 
-class server_stream;
-class client_stream;
-using client_stream_ptr = std::shared_ptr<client_stream>;
-using server_stream_ptr = std::shared_ptr<server_stream>;
-
-struct socks_ctx {
-    int id;
-    server_stream_ptr server;
-    client_stream_ptr client;
-    std::vector<uint8_t> response;
-    std::size_t transferred_bytes_to_remote;
-    std::size_t transferred_bytes_to_local;
-};
+class stream_manager;
+using stream_manager_ptr = std::shared_ptr<stream_manager>;
 
 class socks5_session {
+    struct socks_ctx {
+        int id;
+        std::vector<uint8_t> response;
+        std::size_t transferred_bytes_to_remote;
+        std::size_t transferred_bytes_to_local;
+    };
 public:
-    socks5_session(int id, server_stream_ptr server_stream, client_stream_ptr client_stream);
+    socks5_session(int id, stream_manager_ptr manager);
     void change_state(std::unique_ptr<socks5_state> state);
-    void handle(io_event& event, server_stream_ptr stream);
-    void handle(io_event& event, client_stream_ptr stream);
+    void handle_server_read(io_event& event);
+    void handle_client_read(io_event& event);
+    void handle_server_write(io_event& event);
+    void handle_client_write(io_event& event);
+    void handle_client_connect(io_event& event);
 
     auto& context() { return context_; }
-    void stop();
+
+   stream_manager_ptr manager();
 
 private:
     socks_ctx context_;
     std::unique_ptr<socks5_state> state_;
+    stream_manager_ptr manager_;
 };
 
 #endif //SOCKS5_PROXY_SOCKS5_SESSION_H

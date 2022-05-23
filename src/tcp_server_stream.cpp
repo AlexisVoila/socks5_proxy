@@ -7,7 +7,7 @@ using fmt = boost::format;
 using logger = logging::logger;
 
 tcp_server_stream::tcp_server_stream(const stream_manager_ptr& ptr, int id, net::io_context& ctx)
-    : server_stream(ptr, id), ctx_{ctx}, socket_(ctx_), read_buffer_{}, write_buffer_{} {
+    : server_stream{ptr, id}, ctx_{ctx}, socket_{ctx_}, read_buffer_{}, write_buffer_{} {
 }
 
 tcp_server_stream::~tcp_server_stream() {
@@ -20,8 +20,8 @@ net::io_context& tcp_server_stream::context() { return ctx_; }
 tcp::socket& tcp_server_stream::socket() { return socket_; }
 
 void tcp_server_stream::do_start() {
-    auto str{(fmt("[%1%] incoming connection from socks5-client: [%2%]")
-              % id() % remote_ep_str()).str()};
+    const auto str{(fmt("[%1%] incoming connection from socks5-client: [%2%]")
+                   % id() % remote_ep_str()).str()};
     logger::debug(str);
     do_read();
 }
@@ -38,7 +38,7 @@ void tcp_server_stream::do_write(io_event event) {
             [this, self{shared_from_this()}](const sys::error_code &ec, size_t) {
                 if (!ec) {
                     io_event event{id(), io_event::write};
-                    manager()->notify(std::move(event), shared_from_this());
+                    manager()->on_write(std::move(event), shared_from_this());
                 } else {
                     close(ec);
                 }
@@ -51,7 +51,7 @@ void tcp_server_stream::do_read() {
             [this, self{shared_from_this()}](const sys::error_code &ec, const size_t length) {
                 if (!ec) {
                     io_event event(id(), io_event::read, read_buffer_.data(), length);
-                    manager()->notify(std::move(event), shared_from_this());
+                    manager()->on_read(std::move(event), shared_from_this());
                 } else {
                     close(ec);
                 }
@@ -61,13 +61,14 @@ void tcp_server_stream::do_read() {
 void tcp_server_stream::close(const sys::error_code& ec) {
     io_event event{id(), io_event::close};
 
-    if (ec && ec.value() != net::error::eof) {
+    if (ec && ec.value() != net::error::eof && ec.value() != net::error::connection_aborted) {
         const std::string error{move(ec.message())};
         event.buffer.assign(error.begin(), error.end());
         event.type = io_event::error;
+        manager()->on_error(std::move(event), shared_from_this());
+    } else {
+        manager()->on_close(std::move(event), shared_from_this());
     }
-
-    manager()->notify(std::move(event), shared_from_this());
 }
 
 std::string tcp_server_stream::ep_to_str(const tcp::endpoint& ep) {
@@ -77,10 +78,6 @@ std::string tcp_server_stream::ep_to_str(const tcp::endpoint& ep) {
 
 std::string tcp_server_stream::remote_ep_str() const {
     return ep_to_str(socket_.remote_endpoint());
-}
-
-std::string tcp_server_stream::local_ep_str() const {
-    return ep_to_str(socket_.local_endpoint());
 }
 
 

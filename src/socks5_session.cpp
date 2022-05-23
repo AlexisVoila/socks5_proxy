@@ -1,9 +1,8 @@
 #include "../include/socks5_session.h"
-#include "../include/server_stream.h"
-#include "../include/client_stream.h"
+#include <utility>
 
-socks5_session::socks5_session(int id, server_stream_ptr server_stream, client_stream_ptr client_stream)
-    : context_{id, std::move(server_stream), std::move(client_stream), {}, 0, 0} {
+socks5_session::socks5_session(int id, stream_manager_ptr mgr)
+    : context_{id, {}, 0, 0}, manager_{std::move(mgr)} {
     state_ = socks5_auth_request::instance();
 }
 
@@ -11,17 +10,28 @@ void socks5_session::change_state(std::unique_ptr<socks5_state> state) {
     state_ = move(state);
 }
 
-void socks5_session::handle(io_event &event, server_stream_ptr stream) {
-    state_->handle(this, event, stream);
+void socks5_session::handle_server_read(io_event &event) {
+    state_->handle_server_read(this, event);
 }
 
-void socks5_session::handle(io_event &event, client_stream_ptr stream) {
-    state_->handle(this, event, stream);
+void socks5_session::handle_client_read(io_event &event) {
+    state_->handle_client_read(this, event);
 }
 
-void socks5_session::stop() {
-    if (context_.server)
-        context_.server->stop();
-    if (context_.client)
-        context_.client->stop();
+void socks5_session::handle_server_write(io_event &event) {
+    state_->handle_server_write(this, event);
 }
+
+void socks5_session::handle_client_write(io_event &event) {
+    state_->handle_client_write(this, event);
+}
+
+void socks5_session::handle_client_connect(io_event &event) {
+    state_->handle_client_connect(this, event);
+}
+
+stream_manager_ptr socks5_session::manager() {
+    return manager_;
+}
+
+

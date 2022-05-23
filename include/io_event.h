@@ -15,6 +15,7 @@ struct io_event {
     };
 
     explicit io_event(int _id, event_type _type = none, const std::uint8_t* data = nullptr, std::size_t length = 0);
+    io_event(int _id, event_type _type, const std::vector<std::uint8_t>& data);
     io_event(int _id, event_type _type, std::vector<std::uint8_t>&& data);
 
     io_event(const io_event& other) = default;

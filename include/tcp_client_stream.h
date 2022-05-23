@@ -24,8 +24,8 @@ private:
 
     void close(const sys::error_code& ec);
 
-    void do_set_host(const std::string& host) final;
-    void do_set_service(const std::string& service) final;
+    void do_set_host(std::string host) final;
+    void do_set_service(std::string service) final;
 
     static std::string ep_to_str(const tcp::endpoint& ep);
     std::string remote_ep_str() const;

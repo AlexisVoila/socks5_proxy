@@ -25,7 +25,6 @@ private:
 
     static std::string ep_to_str(const tcp::endpoint& ep);
     std::string remote_ep_str() const;
-    std::string local_ep_str() const;
 
     net::io_context& ctx_;
     tcp::socket socket_;
@@ -33,8 +32,5 @@ private:
     std::array<std::uint8_t, max_buffer_size> read_buffer_;
     std::array<std::uint8_t, max_buffer_size> write_buffer_;
 };
-
-using server_ptr = std::shared_ptr<tcp_server_stream>;
-
 
 #endif //SOCKS5_PROXY_TCP_SERVER_STREAM_H

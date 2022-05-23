@@ -7,9 +7,9 @@ using fmt = boost::format;
 using logger = logging::logger;
 
 tcp_client_stream::tcp_client_stream(const stream_manager_ptr& ptr, int id, net::io_context& ctx)
-    : client_stream(ptr, id)
-    , socket_(ctx)
-    , resolver_(ctx), read_buffer_{}, write_buffer_{} {
+    : client_stream{ptr, id}
+    , socket_{ctx}
+    , resolver_{ctx}, read_buffer_{}, write_buffer_{} {
 }
 
 tcp_client_stream::~tcp_client_stream() {
@@ -21,8 +21,8 @@ void tcp_client_stream::do_start() {
     resolver_.async_resolve(
         host_, port_,
         [this, self{shared_from_this()}] (const sys::error_code& ec, const tcp::resolver::results_type& ep_iter) {
-            if (!ec) {
-                logger::info((fmt("[%1%] resolved [%2%] --> [%3%]\n")
+            if (!ec/* && !ep_iter->endpoint().address().is_unspecified()*/) {
+                logger::info((fmt("[%1%] resolved[%2%] --> [%3%]\n")
                               % id() % host_ % ep_iter->endpoint().address().to_string()).str());
                 do_connect(ep_iter);
             } else {
@@ -44,7 +44,7 @@ void tcp_client_stream::do_connect(const tcp::resolver::results_type& ep_iter) {
                 logger::info((fmt("[%1%] connected to remote address [%2%]") % id() % remote_ep_str()));
                 logger::debug((fmt("[%1%] local address [%2%]") % id() % local_ep_str()));
                 io_event event(id(), io_event::connect);
-                manager()->notify(std::move(event), shared_from_this());
+                manager()->on_connect(std::move(event), shared_from_this());
             } else {
                 close(ec);
             }
@@ -58,7 +58,7 @@ void tcp_client_stream::do_write(io_event event) {
         [this, self{shared_from_this()}] (const sys::error_code& ec, std::size_t) {
             if (!ec) {
                 io_event event{id(), io_event::write};
-                manager()->notify(std::move(event), shared_from_this());
+                manager()->on_write(std::move(event), shared_from_this());
             } else {
                 close(ec);
             }
@@ -72,7 +72,7 @@ void tcp_client_stream::do_read() {
             if (!ec) {
                 if (length) {
                     io_event event{id(), io_event::read, read_buffer_.data(), length};
-                    manager()->notify(std::move(event), shared_from_this());
+                    manager()->on_read(std::move(event), shared_from_this());
                 } else {
                     close(ec);
                 }
@@ -85,18 +85,19 @@ void tcp_client_stream::do_read() {
 void tcp_client_stream::close(const sys::error_code& ec) {
     io_event event{id(), io_event::close};
 
-    if (ec && ec.value() != net::error::eof) {
+    if (ec && ec.value() != net::error::eof && ec.value() != net::error::connection_refused) {
         const std::string error{std::move(ec.message())};
         event.buffer.assign(error.begin(), error.end());
         event.type = io_event::error;
+        manager()->on_error(std::move(event), shared_from_this());
+    } else {
+        manager()->on_close(std::move(event), shared_from_this());
     }
-
-    manager()->notify(std::move(event), shared_from_this());
 }
 
-void tcp_client_stream::do_set_host(const std::string& host) { host_ = host; }
+void tcp_client_stream::do_set_host(std::string host) { host_.swap(host); }
 
-void tcp_client_stream::do_set_service(const std::string& service) { port_ = service; }
+void tcp_client_stream::do_set_service(std::string service) { port_.swap(service); }
 
 std::string tcp_client_stream::ep_to_str(const tcp::endpoint& ep) {
     std::string ep_str{ep.address().to_string() + ":" + std::to_string(ep.port())};

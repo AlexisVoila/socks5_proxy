@@ -87,8 +87,8 @@ bool socks5::get_remote_address_info(const std::uint8_t *buffer, std::size_t len
 }
 
 std::uint16_t socks5::get_port_from_binary(const std::uint8_t* buffer) {
-    if (buffer)	 {
-        return std::uint16_t{static_cast<std::uint16_t>((buffer[0] << 8) | buffer[1])};
-    }
+    if (buffer)
+        return static_cast<std::uint16_t>((buffer[0] << 8) | buffer[1]);
+
     return 0;
 }

@@ -31,7 +31,6 @@ void server::run() {
 void server::configure_signals() {
     signals_.add(SIGINT);
     signals_.add(SIGTERM);
-    signals_.add(SIGQUIT);
 }
 
 void server::async_wait_signals() {
@@ -53,7 +52,7 @@ void server::start_accept() {
                 return;
 
             if (!ec)
-                stream_manager_->start(new_stream);
+                stream_manager_->on_accept(std::move(new_stream));
 
             start_accept();
         });
