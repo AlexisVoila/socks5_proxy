@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cstdint>
+#include <optional>
 
 namespace proto {
     namespace auth {
@@ -72,7 +73,7 @@ public:
         std::uint8_t data[max_host_info_size];
     };
 
-    static bool is_auth_request(const std::uint8_t* buffer, std::size_t length);
+    static std::optional<std::string> is_socks5_auth_request(const std::uint8_t* buffer, std::size_t length);
 
     static bool is_valid_request_packet(const std::uint8_t* buffer, std::size_t length);
 

@@ -21,7 +21,7 @@ tcp::socket& tcp_server_stream::socket() { return socket_; }
 
 void tcp_server_stream::do_start() {
     const auto str{(fmt("[%1%] incoming connection from socks5-client: [%2%]")
-                   % id() % remote_ep_str()).str()};
+                   % id() % socket_.remote_endpoint()).str()};
     logger::debug(str);
     do_read();
 }
@@ -69,15 +69,6 @@ void tcp_server_stream::close(const sys::error_code& ec) {
     } else {
         manager()->on_close(std::move(event), shared_from_this());
     }
-}
-
-std::string tcp_server_stream::ep_to_str(const tcp::endpoint& ep) {
-    std::string ep_str{ep.address().to_string() + ":" + std::to_string(ep.port())};
-    return ep_str;
-}
-
-std::string tcp_server_stream::remote_ep_str() const {
-    return ep_to_str(socket_.remote_endpoint());
 }
 
 

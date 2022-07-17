@@ -20,11 +20,9 @@ tcp_client_stream::~tcp_client_stream() {
 void tcp_client_stream::do_start() {
     resolver_.async_resolve(
         host_, port_,
-        [this, self{shared_from_this()}] (const sys::error_code& ec, const tcp::resolver::results_type& ep_iter) {
-            if (!ec/* && !ep_iter->endpoint().address().is_unspecified()*/) {
-                logger::info((fmt("[%1%] resolved[%2%] --> [%3%]\n")
-                              % id() % host_ % ep_iter->endpoint().address().to_string()).str());
-                do_connect(ep_iter);
+        [this, self{shared_from_this()}] (const sys::error_code& ec, tcp::resolver::results_type results) {
+            if (!ec) {
+                do_connect(std::move(results));
             } else {
                 close(ec);
             }
@@ -36,13 +34,13 @@ void tcp_client_stream::do_stop() {
     socket_.shutdown(tcp::socket::shutdown_both, ignored_ec);
 }
 
-void tcp_client_stream::do_connect(const tcp::resolver::results_type& ep_iter) {
+void tcp_client_stream::do_connect(tcp::resolver::results_type&& results) {
     net::async_connect(
-        socket_, ep_iter,
+        socket_, results,
         [this, self{shared_from_this()}](const sys::error_code& ec, const tcp::endpoint& ep) {
             if (!ec) {
-                logger::info((fmt("[%1%] connected to remote address [%2%]") % id() % remote_ep_str()));
-                logger::debug((fmt("[%1%] local address [%2%]") % id() % local_ep_str()));
+                logger::info((fmt("[%1%] connected to [%2%] --> [%3%]") % id() % host_ % socket_.remote_endpoint()));
+                logger::debug((fmt("[%1%] local address [%2%]") % id() % socket_.local_endpoint()));
                 io_event event(id(), io_event::connect);
                 manager()->on_connect(std::move(event), shared_from_this());
             } else {
@@ -98,16 +96,3 @@ void tcp_client_stream::close(const sys::error_code& ec) {
 void tcp_client_stream::do_set_host(std::string host) { host_.swap(host); }
 
 void tcp_client_stream::do_set_service(std::string service) { port_.swap(service); }
-
-std::string tcp_client_stream::ep_to_str(const tcp::endpoint& ep) {
-    std::string ep_str{ep.address().to_string() + ":" + std::to_string(ep.port())};
-    return ep_str;
-}
-
-std::string tcp_client_stream::remote_ep_str() const {
-    return ep_to_str(socket_.remote_endpoint());
-}
-
-std::string tcp_client_stream::local_ep_str() const {
-    return ep_to_str(socket_.local_endpoint());
-}

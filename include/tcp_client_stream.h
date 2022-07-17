@@ -17,7 +17,7 @@ private:
     void do_start() final;
     void do_stop() final;
 
-    void do_connect(const tcp::resolver::results_type& ep_iter);
+    void do_connect(tcp::resolver::results_type&& results);
 
     void do_read() final;
     void do_write(io_event event) final;
@@ -26,10 +26,6 @@ private:
 
     void do_set_host(std::string host) final;
     void do_set_service(std::string service) final;
-
-    static std::string ep_to_str(const tcp::endpoint& ep);
-    std::string remote_ep_str() const;
-    std::string local_ep_str() const;
 
     tcp::socket socket_;
     tcp::resolver resolver_;

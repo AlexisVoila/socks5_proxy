@@ -44,13 +44,12 @@ namespace logging {
             {level::debug,   "debug"},
             {level::trace,   "trace"},
             {level::info,    "info"},
-            {level::warning, "warning"},
+            {level::warning, "warn"},
             {level::error,   "error"},
             {level::fatal,   "fatal"},
         };
 
-        auto it = level_string_map.find(log_level);
-        if (it != level_string_map.end())
+        if (const auto it = level_string_map.find(log_level); it != level_string_map.end())
             return it->second;
 
         return {};
@@ -58,7 +57,7 @@ namespace logging {
 
     std::string logging::logger::timestamp() {
         auto now = std::chrono::system_clock::now();
-        auto tt = std::chrono::system_clock::to_time_t ( now );
+        auto tt = std::chrono::system_clock::to_time_t(now);
 
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 

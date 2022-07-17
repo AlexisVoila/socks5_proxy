@@ -6,23 +6,22 @@ namespace sys = boost::system;
 
 using namespace proto;
 
-bool socks5::is_auth_request(const std::uint8_t *buffer, std::size_t length) {
+std::optional<std::string> socks5::is_socks5_auth_request(const std::uint8_t *buffer, std::size_t length) {
     if (!buffer || length < auth::kHeaderMinlength)
-        return false;
+        return "socks5 proto: bad initial request packet";
 
-    auto auth_header = static_cast<const auth::request*>(static_cast<const void*>(buffer));
+    const auto auth_header = static_cast<const auth::request*>(static_cast<const void*>(buffer));
     if (auth_header->version != proto::version)
-        return false;
+        return "socks5 proto: only protocol version 5 is supported";
 
-    if ((auth_header->number_of_methods + auth::kHeaderMinlength) > length)
-        return false;
+    if (static_cast<size_t>(auth_header->number_of_methods + auth::kHeaderMinlength) > length)
+        return "socks5 proto: invalid authentication request length";
 
-    for (std::size_t i=0; i<auth_header->number_of_methods; i++) {
+    for (std::size_t i=0; i<auth_header->number_of_methods; i++)
         if (auth_header->methods[i] == auth::kNoAuth)
-            return true;
-    }
+            return {};
 
-    return false;
+    return "authentication support is not implemented";
 }
 
 bool socks5::is_valid_request_packet(const std::uint8_t *buffer, std::size_t length) {

@@ -23,9 +23,6 @@ private:
 
     void close(const sys::error_code& ec);
 
-    static std::string ep_to_str(const tcp::endpoint& ep);
-    std::string remote_ep_str() const;
-
     net::io_context& ctx_;
     tcp::socket socket_;
 

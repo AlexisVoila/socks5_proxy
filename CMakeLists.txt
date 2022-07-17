@@ -16,7 +16,7 @@ if (WIN32)
     set (Boost_LIBRARIES    "c:/dev/lib/boost/boost_1_79_0/lib64-msvc-14.3")
 endif()
 
-find_package(Boost 1.78 COMPONENTS program_options REQUIRED)
+find_package(Boost COMPONENTS program_options REQUIRED)
 
 message(STATUS "Boost path:             ${BOOST_ROOT}")
 message(STATUS "Boost include path:     ${Boost_INCLUDE_DIR}")
@@ -59,7 +59,7 @@ add_executable(socks5_proxy ${SOURCES} ${HEADERS})
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
 
 if (MSVC)
-
     target_compile_definitions(${PROJECT_NAME} PRIVATE _WIN32_WINNT=0x0A00)
+    set(CMAKE_VS_JUST_MY_CODE_DEBUGGING ON)
 endif()
 

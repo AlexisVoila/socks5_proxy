@@ -18,14 +18,14 @@ void socks5_state::change_state(socks5_session *session, std::unique_ptr<socks5_
 }
 
 void socks5_auth_request::handle_server_read(socks5_session *session, io_event &event) {
-    auto ctx = session->context();
-    auto is_socks5_auth_request = socks5::is_auth_request(event.buffer.data(), event.buffer.size());
+    auto& ctx = session->context();
+    const auto error = socks5::is_socks5_auth_request(event.buffer.data(), event.buffer.size());
 
     ctx.response.resize(2);
     ctx.response[0] = socks5::proto::version;
-    ctx.response[1] = is_socks5_auth_request ? proto::auth::kNoAuth : proto::auth::kNotSupported;
+    ctx.response[1] = error ? proto::auth::kNotSupported : proto::auth::kNoAuth;
     if (ctx.response[1] == proto::auth::kNotSupported)
-        logger::warning((fmt("[%1%] socks5 protocol: auth request is not supported") % ctx.id).str());
+        logger::warning((fmt("[%1%] %2%") % ctx.id % *error).str());
 
     io_event new_event{event.id, io_event::none, ctx.response};
     session->manager()->write_server(ctx.id, std::move(new_event));
