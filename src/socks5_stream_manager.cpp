@@ -33,7 +33,7 @@ void socks5_stream_manager::on_close(io_event event, stream_ptr stream) {
 }
 
 void socks5_stream_manager::on_error(io_event event, stream_ptr stream) {
-    std::string error_string(event.buffer.begin(), event.buffer.end());
+    std::string error_string(event.begin(), event.end());
     logger::error((fmt("[%1%] session error: %2%") % stream->id() % error_string).str());
     stop(stream);
 }

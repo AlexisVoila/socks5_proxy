@@ -32,13 +32,12 @@ void tcp_server_stream::do_stop() {
 }
 
 void tcp_server_stream::do_write(io_event event) {
-    copy(event.buffer.begin(), event.buffer.end(), write_buffer_.begin());
+    copy(event.begin(), event.end(), write_buffer_.begin());
     net::async_write(
-            socket_, net::buffer(write_buffer_, event.buffer.size()),
+            socket_, net::buffer(write_buffer_, event.size()),
             [this, self{shared_from_this()}](const sys::error_code &ec, size_t) {
                 if (!ec) {
-                    io_event event{id(), io_event::write};
-                    manager()->on_write(std::move(event), shared_from_this());
+                    manager()->on_write(std::move(io_event{}), shared_from_this());
                 } else {
                     close(ec);
                 }
@@ -50,7 +49,7 @@ void tcp_server_stream::do_read() {
             net::buffer(read_buffer_),
             [this, self{shared_from_this()}](const sys::error_code &ec, const size_t length) {
                 if (!ec) {
-                    io_event event(id(), io_event::read, read_buffer_.data(), length);
+                    io_event event(read_buffer_.data(), read_buffer_.data() + length);
                     manager()->on_read(std::move(event), shared_from_this());
                 } else {
                     close(ec);
@@ -59,15 +58,11 @@ void tcp_server_stream::do_read() {
 }
 
 void tcp_server_stream::close(const sys::error_code& ec) {
-    io_event event{id(), io_event::close};
-
     if (ec && ec.value() != net::error::eof && ec.value() != net::error::connection_aborted) {
         const std::string error{move(ec.message())};
-        event.buffer.assign(error.begin(), error.end());
-        event.type = io_event::error;
-        manager()->on_error(std::move(event), shared_from_this());
+        manager()->on_error(std::move(io_event{error.begin(), error.end()}), shared_from_this());
     } else {
-        manager()->on_close(std::move(event), shared_from_this());
+        manager()->on_close(std::move(io_event{}), shared_from_this());
     }
 }
 

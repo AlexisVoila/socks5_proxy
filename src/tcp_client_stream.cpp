@@ -41,7 +41,7 @@ void tcp_client_stream::do_connect(tcp::resolver::results_type&& results) {
             if (!ec) {
                 logger::info((fmt("[%1%] connected to [%2%] --> [%3%]") % id() % host_ % socket_.remote_endpoint()));
                 logger::debug((fmt("[%1%] local address [%2%]") % id() % socket_.local_endpoint()));
-                io_event event(id(), io_event::connect);
+                io_event event{};
                 manager()->on_connect(std::move(event), shared_from_this());
             } else {
                 close(ec);
@@ -50,13 +50,12 @@ void tcp_client_stream::do_connect(tcp::resolver::results_type&& results) {
 }
 
 void tcp_client_stream::do_write(io_event event) {
-    copy(event.buffer.begin(), event.buffer.end(), write_buffer_.begin());
+    copy(event.begin(), event.end(), write_buffer_.begin());
     net::async_write(
-        socket_, net::buffer(write_buffer_, event.buffer.size()),
+        socket_, net::buffer(write_buffer_, event.size()),
         [this, self{shared_from_this()}] (const sys::error_code& ec, std::size_t) {
             if (!ec) {
-                io_event event{id(), io_event::write};
-                manager()->on_write(std::move(event), shared_from_this());
+                manager()->on_write(std::move(io_event{}), shared_from_this());
             } else {
                 close(ec);
             }
@@ -69,7 +68,7 @@ void tcp_client_stream::do_read() {
         [this, self{shared_from_this()}] (const sys::error_code& ec, const std::size_t length) {
             if (!ec) {
                 if (length) {
-                    io_event event{id(), io_event::read, read_buffer_.data(), length};
+                    io_event event{read_buffer_.data(), read_buffer_.data() + length};
                     manager()->on_read(std::move(event), shared_from_this());
                 } else {
                     close(ec);
@@ -81,15 +80,11 @@ void tcp_client_stream::do_read() {
 }
 
 void tcp_client_stream::close(const sys::error_code& ec) {
-    io_event event{id(), io_event::close};
-
     if (ec && ec.value() != net::error::eof && ec.value() != net::error::connection_refused) {
         const std::string error{std::move(ec.message())};
-        event.buffer.assign(error.begin(), error.end());
-        event.type = io_event::error;
-        manager()->on_error(std::move(event), shared_from_this());
+        manager()->on_error(std::move(io_event{error.begin(), error.end()}), shared_from_this());
     } else {
-        manager()->on_close(std::move(event), shared_from_this());
+        manager()->on_close(std::move(io_event{}), shared_from_this());
     }
 }
 

@@ -27,6 +27,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 
 # Asking Boost for information about automatic link requests
 add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
+set(CMAKE_VS_JUST_MY_CODE_DEBUGGING ON)
 
 set (HEADERS
         include/stream.h
@@ -50,7 +51,6 @@ set (SOURCES
         src/tcp_client_stream.cpp
         src/socks5_state.cpp
         src/socks5_session.cpp
-        src/io_event.cpp
         src/socks5.cpp
         logger/logger.cpp
         main.cpp)
